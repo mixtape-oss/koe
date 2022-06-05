@@ -1,17 +1,13 @@
 package moe.kyokobot.koe.crypto;
 
 import io.netty.buffer.ByteBuf;
+import moe.kyokobot.koe.internal.rtp.RtpHeader;
 
 public class PlainEncryptionMode implements EncryptionMode {
     @Override
-    public boolean box(ByteBuf opus, int start, ByteBuf output, byte[] secretKey) {
-        opus.readerIndex(start);
-        output.writeBytes(opus);
+    public boolean box(byte[] secretKey, RtpHeader rtpHeader, ByteBuf packet, int start, ByteBuf output) {
+        packet.readerIndex(start);
+        output.writeBytes(packet);
         return true;
-    }
-
-    @Override
-    public String getName() {
-        return "plain";
     }
 }

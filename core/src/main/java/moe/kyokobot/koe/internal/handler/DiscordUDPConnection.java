@@ -8,7 +8,7 @@ import io.netty.channel.socket.DatagramChannel;
 import moe.kyokobot.koe.MediaConnection;
 import moe.kyokobot.koe.codec.Codec;
 import moe.kyokobot.koe.crypto.EncryptionMode;
-import moe.kyokobot.koe.internal.util.RTPHeaderWriter;
+import moe.kyokobot.koe.internal.rtp.RtpHeader;
 import moe.kyokobot.koe.handler.ConnectionHandler;
 import moe.kyokobot.koe.internal.NettyBootstrapFactory;
 import moe.kyokobot.koe.internal.json.JsonObject;
@@ -115,16 +115,26 @@ public class DiscordUDPConnection implements Closeable, ConnectionHandler<InetSo
 
         var buf = allocator.buffer();
         buf.clear();
-        RTPHeaderWriter.writeV2(buf, payloadType, nextSeq(), timestamp, ssrc, extension);
-        if (encryptionMode.box(data, len, buf, secretKey)) {
-            return buf;
-        } else {
+
+        var header = new RtpHeader(
+            extension,
+            payloadType,
+            nextSeq(),
+            timestamp,
+            ssrc
+        );
+
+        header.write(buf);
+        var encrypted = encryptionMode.box(secretKey, header, data, len, buf);
+
+        if (!encrypted) {
             logger.debug("Encryption failed!");
             buf.release();
             // handle failed encryption?
+            return null;
         }
 
-        return null;
+        return buf;
     }
 
     public char nextSeq() {
